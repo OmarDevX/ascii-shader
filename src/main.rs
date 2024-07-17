@@ -1,3 +1,4 @@
+use std::process::Command;
 use std::ffi::CString;
 use std::fs;
 use std::ptr;
@@ -10,15 +11,49 @@ use colored::*;
 const WIDTH: usize = 100;
 const HEIGHT: usize = 80;
 
+
+// // Render One Frame
+// fn main() {
+//     let mut grid: Vec<(String, (u8, u8, u8))> = Vec::new();
+//     tokio::runtime::Builder::new_current_thread()
+//         .enable_all()
+//         .build()
+//         .unwrap()
+//         .block_on(create_and_modify_image(&mut grid));
+//     render(&grid, WIDTH * 2);
+// }
+
+
 fn main() {
-    let mut grid: Vec<(String, (u8, u8, u8))> = Vec::new();
-    tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(create_and_modify_image(&mut grid));
-    render(&grid, WIDTH * 2);
+    // Initialize GLFW
+    let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
+    glfw.window_hint(glfw::WindowHint::Visible(false));
+    let (mut window, _events) = glfw.create_window(
+        1,
+        1,
+        "Invisible Window",
+        glfw::WindowMode::Windowed,
+    )
+    .expect("Failed to create GLFW window.");
+    window.make_current();
+    gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
+    let mut grid: Vec<(String, (u8, u8, u8))> = vec![];
+    
+    while !window.should_close() {
+        let new_pixels = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(create_and_modify_image(&mut grid));
+
+        // Render the grid
+        render(&grid, WIDTH * 2);
+
+        window.swap_buffers();
+        glfw.poll_events();
+    }
 }
+
 
 async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<(u8, u8, u8)> {
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
@@ -143,11 +178,11 @@ async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<
                 691..=720 => "x".to_string(),
                 721..=750 => "y".to_string(),
                 751..=765 => "z".to_string(),
-                _ => ".".to_string(), 
+                _ => ".".to_string(),
             };
 
             grid.push((character.clone(), (r, g, b)));
-            grid.push((character, (r, g, b))); 
+            grid.push((character, (r, g, b)));
         }
 
         // Clean up
@@ -159,46 +194,22 @@ async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<
     vec![(0, 0, 0); WIDTH * HEIGHT] // Dummy return
 }
 
-fn colorize(character: &str, color: (u8, u8, u8)) -> ColoredString {
-    match character {
-        "a" => character.red(),
-        "b" => character.green(),
-        "c" => character.blue(),
-        "d" => character.yellow(),
-        "e" => character.magenta(),
-        "f" => character.cyan(),
-        "g" => character.red(),
-        "h" => character.green(),
-        "i" => character.black(),
-        "n" => character.white(),
-        "j" => character.yellow(),
-        "k" => character.magenta(),
-        "l" => character.cyan(),
-        "m" => character.red(),
-        "o" => character.green(),
-        "p" => character.blue(),
-        "q" => character.yellow(),
-        "r" => character.magenta(),
-        "s" => character.cyan(),
-        "t" => character.red(),
-        "u" => character.green(),
-        "v" => character.blue(),
-        "w" => character.yellow(),
-        "x" => character.magenta(),
-        "y" => character.cyan(),
-        "z" => character.red(),
-        _ => character.black(),
-    }
-    .truecolor(color.0, color.1, color.2)
+fn colorize(character: &str, color: (u8, u8, u8)) -> String {
+    format!("\x1b[38;2;{};{};{}m{}\x1b[0m", color.0, color.1, color.2, character)
 }
 
+
 fn render(grid: &Vec<(String, (u8, u8, u8))>, map_size: usize) {
+    let mut output = String::new();
+
     for (index, (character, color)) in grid.iter().enumerate() {
         let colored_char = colorize(character, *color);
-        print!("{}", colored_char);
+        output.push_str(&colored_char);
 
         if (index + 1) % map_size == 0 {
-            println!();
+            output.push('\n');
         }
     }
+
+    print!("{}", output);
 }
