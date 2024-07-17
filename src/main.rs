@@ -21,7 +21,6 @@ fn main() {
 }
 
 async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<(u8, u8, u8)> {
-    // Initialize GLFW and create an invisible window (required to create an OpenGL context)
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
     glfw.window_hint(glfw::WindowHint::Visible(false));
     let (mut window, _events) = glfw
@@ -34,13 +33,11 @@ async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<
         .expect("Failed to read compute shader file");
 
     unsafe {
-        // Create and compile compute shader
         let compute_shader = gl::CreateShader(gl::COMPUTE_SHADER);
         let c_str_compute_shader = CString::new(compute_shader_src.as_bytes()).unwrap();
         gl::ShaderSource(compute_shader, 1, &c_str_compute_shader.as_ptr(), ptr::null());
         gl::CompileShader(compute_shader);
 
-        // Check for compilation errors
         let mut success = gl::FALSE as GLint;
         gl::GetShaderiv(compute_shader, gl::COMPILE_STATUS, &mut success);
         if success != gl::TRUE as GLint {
@@ -59,12 +56,10 @@ async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<
             );
         }
 
-        // Create shader program and link
         let shader_program = gl::CreateProgram();
         gl::AttachShader(shader_program, compute_shader);
         gl::LinkProgram(shader_program);
 
-        // Check for linking errors
         gl::GetProgramiv(shader_program, gl::LINK_STATUS, &mut success);
         if success != gl::TRUE as GLint {
             let mut len = 0;
@@ -82,7 +77,6 @@ async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<
             );
         }
 
-        // Create texture to store the image
         let mut img_output = 0;
         gl::GenTextures(1, &mut img_output);
         gl::BindTexture(gl::TEXTURE_2D, img_output);
@@ -102,19 +96,11 @@ async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as GLint);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
 
-        // Bind the texture to image unit 0
         gl::BindImageTexture(0, img_output, 0, gl::FALSE, 0, gl::WRITE_ONLY, gl::RGBA8);
-
-        // Use the compute shader
         gl::UseProgram(shader_program);
-
-        // Dispatch the compute shader
         gl::DispatchCompute(WIDTH as GLuint, HEIGHT as GLuint, 1);
-
-        // Ensure all writes to the image are finished
         gl::MemoryBarrier(gl::SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-        // Read back the image data
         let mut pixels: Vec<u8> = vec![0; WIDTH * HEIGHT * 4];
         gl::GetTexImage(
             gl::TEXTURE_2D,
@@ -124,7 +110,6 @@ async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<
             pixels.as_mut_ptr() as *mut std::ffi::c_void,
         );
 
-        // Convert the image data to (r, g, b) tuples and ASCII characters
         for i in 0..(WIDTH * HEIGHT) {
             let r = pixels[i * 4];
             let g = pixels[i * 4 + 1];
@@ -158,11 +143,11 @@ async fn create_and_modify_image(grid: &mut Vec<(String, (u8, u8, u8))>) -> Vec<
                 691..=720 => "x".to_string(),
                 721..=750 => "y".to_string(),
                 751..=765 => "z".to_string(),
-                _ => ".".to_string(), // Default case (if needed)
+                _ => ".".to_string(), 
             };
 
             grid.push((character.clone(), (r, g, b)));
-            grid.push((character, (r, g, b))); // Repeat the character to adjust for aspect ratio
+            grid.push((character, (r, g, b))); 
         }
 
         // Clean up
@@ -212,7 +197,6 @@ fn render(grid: &Vec<(String, (u8, u8, u8))>, map_size: usize) {
         let colored_char = colorize(character, *color);
         print!("{}", colored_char);
 
-        // Print a newline after every map_size elements (assuming a 2D grid layout)
         if (index + 1) % map_size == 0 {
             println!();
         }
