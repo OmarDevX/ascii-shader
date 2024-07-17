@@ -1,0 +1,16 @@
+[package]
+name = "terminalgamers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+colored = "2.1.0"
+eframe = "0.28.1"
+egui = "0.28.1"
+egui_extras = "0.28.1"
+gl = "0.14.0"
+glfw = "0.57.0"
+glm = "0.2.3"
+image = "0.25.1"
+reqwest = "0.12.5"
+tokio = "1.38.0"
